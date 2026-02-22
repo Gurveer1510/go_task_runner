@@ -21,7 +21,7 @@ type Job struct {
 	ID         uuid.UUID
 	Type       string
 	Payload    json.RawMessage
-	string     JobStatus
+	Status     JobStatus
 	RetryCount int
 	MaxRetries int
 	NextRunAt  time.Time
