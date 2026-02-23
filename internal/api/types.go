@@ -6,18 +6,12 @@ import (
 )
 
 type CreateJobRequest struct {
-	Type       string          `json:"type,omitempty"`
+	Type       string          `json:"type,omitempty" validate:"required"`
 	Payload    json.RawMessage `json:"payload,omitempty"`
-	MaxRetries int             `json:"max_retries,omitempty"`
+	MaxRetries int             `json:"max_retries,omitempty" validate:"gte=0,lte=10"`
 	NextRunAt  *time.Time      `json:"next_run_at,omitempty"`
 }
 
 type CreateJobResponse struct {
 	ID string `json:"id,omitempty"`
-}
-
-type EmailPayload struct {
-	To      string `json:"to"`
-	Subject string `json:"subject"`
-	Body    string `json:"body"`
 }

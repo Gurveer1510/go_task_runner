@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/go-task-runner/internal/api"
 	"github.com/go-task-runner/internal/config"
 	"github.com/go-task-runner/internal/db"
@@ -22,7 +23,8 @@ func main() {
 	defer pool.Close()
 
 	jobRepo := repository.NewJobRepository(pool)
-	handler := api.NewHandler(jobRepo)
+	v := validator.New()
+	handler := api.NewHandler(jobRepo, v)
 
 	http.HandleFunc("/jobs", handler.CreateJob)
 
