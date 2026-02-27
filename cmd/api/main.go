@@ -1,9 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/go-task-runner/internal/api"
@@ -26,9 +30,41 @@ func main() {
 	v := validator.New()
 	handler := api.NewHandler(jobRepo, v)
 
-	http.HandleFunc("/jobs", handler.CreateJob)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/jobs", handler.CreateJob)
+	
+	server := http.Server{
+		Addr:         ":8080",
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
 
-	log.Println("API running on", cfg.Port)
+	go func() {
+		log.Println("Server running on :8080")
+		if err := server.ListenAndServe(); err != nil {
+			log.Fatalf("could not start server: %v\n", err)
+		}
+	}()
 
-	log.Fatalln(http.ListenAndServe(fmt.Sprintf(":%v",cfg.Port), nil))
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	<-stop
+
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("graceful shutdown failed: %v", err)
+		if err := server.Close(); err != nil {
+			log.Fatalf("force closed failed: %v", err)
+		}
+	}
+
+	log.Println("Server exited.")
+
 }
