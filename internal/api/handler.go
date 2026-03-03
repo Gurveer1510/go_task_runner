@@ -14,11 +14,11 @@ import (
 )
 
 type Handler struct {
-	repo      *repository.JobRepository
+	repo      *repository.JobRepo
 	validator *validator.Validate
 }
 
-func NewHandler(repo *repository.JobRepository, v *validator.Validate) *Handler {
+func NewHandler(repo *repository.JobRepo, v *validator.Validate) *Handler {
 	return &Handler{repo: repo, validator: v}
 }
 
@@ -98,9 +98,9 @@ func (h *Handler) CreateJob(rw http.ResponseWriter, r *http.Request) {
 		log.Println(err.Error())
 		return
 	}
+	log.Printf("in the handler job with ID: %+v", job)
 
 	resp := CreateJobResponse{ID: id.String()}
-
 	rw.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(rw).Encode(resp)
 }
