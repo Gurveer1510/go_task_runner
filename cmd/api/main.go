@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -31,10 +32,10 @@ func main() {
 	handler := api.NewHandler(jobRepo, v)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/jobs", handler.CreateJob)
+	api.RegisterRoutes(mux, handler)
 	
 	server := http.Server{
-		Addr:         ":8080",
+		Addr:         fmt.Sprintf(":%v", cfg.Port),
 		Handler:      mux,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -43,7 +44,7 @@ func main() {
 
 	go func() {
 		log.Println("Server running on :8080")
-		if err := server.ListenAndServe(); err != nil {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("could not start server: %v\n", err)
 		}
 	}()

@@ -14,11 +14,11 @@ import (
 )
 
 type Handler struct {
-	repo      *repository.JobRepo
+	repo      repository.JobRepositoryInterface
 	validator *validator.Validate
 }
 
-func NewHandler(repo *repository.JobRepo, v *validator.Validate) *Handler {
+func NewHandler(repo repository.JobRepositoryInterface, v *validator.Validate) *Handler {
 	return &Handler{repo: repo, validator: v}
 }
 

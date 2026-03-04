@@ -17,7 +17,10 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	cfg, _ := config.LoadConfig()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		panic(err)
+	}
 
 	pool := db.NewPool(cfg.DBUrl)
 	defer pool.Close()

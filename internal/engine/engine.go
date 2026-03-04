@@ -13,7 +13,7 @@ type Engine struct {
 	baseDelay   time.Duration
 }
 
-func New(repo *repository.JobRepo, executor Executor, concurrency int, baseDelay time.Duration) *Engine {
+func New(repo repository.JobRepositoryInterface, executor Executor, concurrency int, baseDelay time.Duration) *Engine {
 	return &Engine{
 		repository:  repo,
 		executor:    executor,

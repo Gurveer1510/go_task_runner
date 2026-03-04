@@ -37,7 +37,11 @@ func (e *Engine) workerLoop(ctx context.Context, id int) {
 
 		err = e.executor.Execute(ctx, job)
 		if err != nil {
-			e.repository.MarkFailed(ctx, job.ID.String())
+			if job.RetryCount < job.MaxRetries {
+				e.repository.MarkFailed(ctx, job.ID.String())
+			} else {
+				e.repository.MarkFailed(ctx, job.ID.String())
+			}
 		} else {
 			e.repository.MarkCompleted(ctx, job.ID.String())
 		}
