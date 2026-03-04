@@ -68,7 +68,12 @@ func (r *JobRepo) MarkCompleted(ctx context.Context, jobID string) error {
 func (r *JobRepo) MarkRetrying(ctx context.Context, jobID string) error {
 	query := `
 		UPDATE jobs
-		SET status = 'retrying'
+		SET status = 'retrying',
+			retry_count = retry_count + 1,
+			next_run_at = NOW() + INTERVAL '1 second' * (retry_count + 1),
+			locked_by = NULL,
+			locked_at = NULL,
+			updated_at = NOW()
 		WHERE id = $1
 	`
 	_, err := r.db.Exec(ctx, query, jobID)
