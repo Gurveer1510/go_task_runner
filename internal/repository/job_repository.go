@@ -4,11 +4,12 @@ import (
 	"context"
 
 	"github.com/go-task-runner/internal/models"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type JobRepositoryInterface interface {
-	Create(ctx context.Context, job *models.Job) error
+	Create(ctx context.Context, job *models.Job) (string, error)
 	MarkFailed(ctx context.Context, jobID string) error
 	MarkCompleted(ctx context.Context, jobID string) error
 	MarkRetrying(ctx context.Context, jobID string) error
@@ -23,13 +24,15 @@ func NewJobRepository(db *pgxpool.Pool) *JobRepo {
 	return &JobRepo{db: db}
 }
 
-func (r *JobRepo) Create(ctx context.Context, job *models.Job) error {
+func (r *JobRepo) Create(ctx context.Context, job *models.Job) (string, error) {
 	query := `
 		INSERT INTO jobs (
 			id, type, payload, status, retry_count, max_retries, next_run_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+		 RETURNING id
 	`
-	_, err := r.db.Exec(ctx, query,
+	var id uuid.UUID
+	err := r.db.QueryRow(ctx, query,
 		job.ID,
 		job.Type,
 		job.Payload,
@@ -37,9 +40,9 @@ func (r *JobRepo) Create(ctx context.Context, job *models.Job) error {
 		job.RetryCount,
 		job.MaxRetries,
 		job.NextRunAt,
-	)
+	).Scan(&id)
 
-	return err
+	return id.String(), err
 }
 
 func (r *JobRepo) MarkFailed(ctx context.Context, jobID string) error {

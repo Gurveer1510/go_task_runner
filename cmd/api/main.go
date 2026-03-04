@@ -15,6 +15,7 @@ import (
 	"github.com/go-task-runner/internal/config"
 	"github.com/go-task-runner/internal/db"
 	"github.com/go-task-runner/internal/repository"
+	"github.com/go-task-runner/internal/usecase"
 )
 
 func main() {
@@ -29,11 +30,12 @@ func main() {
 
 	jobRepo := repository.NewJobRepository(pool)
 	v := validator.New()
-	handler := api.NewHandler(jobRepo, v)
+	jobUsecase := usecase.NewJobUsecase(jobRepo, v)
+	handler := api.NewHandler(jobUsecase)
 
 	mux := http.NewServeMux()
 	api.RegisterRoutes(mux, handler)
-	
+
 	server := http.Server{
 		Addr:         fmt.Sprintf(":%v", cfg.Port),
 		Handler:      mux,

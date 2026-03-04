@@ -15,3 +15,7 @@ type CreateJobRequest struct {
 type CreateJobResponse struct {
 	ID string `json:"id,omitempty"`
 }
+
+type ErrorResponse struct {
+	Error string `json:"error,omitempty"`
+}
