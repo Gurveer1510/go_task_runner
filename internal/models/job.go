@@ -24,7 +24,7 @@ type Job struct {
 	Status     JobStatus
 	RetryCount int
 	MaxRetries int
-	NextRunAt  time.Time
+	NextRunAt  *time.Time
 	LockedBy   *string
 	LockedAt   *time.Time
 	CreatedAt  time.Time
