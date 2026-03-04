@@ -1,0 +1,4 @@
+ALTER TABLE jobs
+ALTER COLUMN next_run_at
+TYPE TIMESTAMPTZ
+USING next_run_at AT TIME ZONE 'UTC';
