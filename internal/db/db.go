@@ -2,27 +2,28 @@ package db
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"time"
 
+	"github.com/go-task-runner/internal/logger"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-func NewPool(databaseUrl string) *pgxpool.Pool {
+func NewPool(databaseUrl string) (*pgxpool.Pool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	pool, err := pgxpool.Connect(ctx, databaseUrl)
 	if err != nil {
-		log.Fatalf("Unable to create the connection pool: %v", err)
+		return nil, fmt.Errorf("unable to create connection pool: %w", err)
 	}
 
 	err = pool.Ping(ctx)
 	if err != nil {
-		log.Fatalf("Unable to ping the database: %v", err)
+		return nil, fmt.Errorf("unable to ping database: %w", err)
 	}
 
-	log.Println("Database connected successfully")
+	logger.Log.Info("database connected successfully")
 
-	return pool
+	return pool, nil
 }

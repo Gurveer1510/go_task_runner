@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,18 +13,24 @@ import (
 	"github.com/go-task-runner/internal/api"
 	"github.com/go-task-runner/internal/config"
 	"github.com/go-task-runner/internal/db"
+	"github.com/go-task-runner/internal/logger"
 	"github.com/go-task-runner/internal/repository"
 	"github.com/go-task-runner/internal/usecase"
 )
 
 func main() {
-
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		panic(err)
 	}
 
-	pool := db.NewPool(cfg.DBUrl)
+	logger.Init(cfg.AppEnv)
+
+	pool, err := db.NewPool(cfg.DBUrl)
+	if err != nil {
+		logger.Log.Error("failed to connect to database", "error", err)
+		os.Exit(1)
+	}
 	defer pool.Close()
 
 	jobRepo := repository.NewJobRepository(pool)
@@ -45,9 +50,10 @@ func main() {
 	}
 
 	go func() {
-		log.Println("Server running on :8080")
+		logger.Log.Info("api server started", "port", cfg.Port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("could not start server: %v\n", err)
+			logger.Log.Error("server failed", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -56,18 +62,17 @@ func main() {
 
 	<-stop
 
-	log.Println("Shutting down server...")
+	logger.Log.Info("shutting down server")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("graceful shutdown failed: %v", err)
+		logger.Log.Error("graceful shutdown failed", "error", err)
 		if err := server.Close(); err != nil {
-			log.Fatalf("force closed failed: %v", err)
+			logger.Log.Error("force close failed", "error", err)
 		}
 	}
 
-	log.Println("Server exited.")
-
+	logger.Log.Info("server exited")
 }

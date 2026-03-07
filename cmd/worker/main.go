@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/go-task-runner/internal/config"
 	"github.com/go-task-runner/internal/db"
 	"github.com/go-task-runner/internal/engine"
+	"github.com/go-task-runner/internal/logger"
 	"github.com/go-task-runner/internal/repository"
 )
 
@@ -22,21 +22,30 @@ func main() {
 		panic(err)
 	}
 
-	pool := db.NewPool(cfg.DBUrl)
+	logger.Init(cfg.AppEnv)
+
+	pool, err := db.NewPool(cfg.DBUrl)
+	if err != nil {
+		logger.Log.Error("failed to connect to database", "error", err)
+		os.Exit(1)
+	}
 	defer pool.Close()
 
 	repo := repository.NewJobRepository(pool)
 	executor := engine.NewDefaultExecutor()
 
 	executor.Register("email", func(ctx context.Context, payload []byte) error {
-		// Simulate processing an email job
+		// Placeholder — will be replaced with jobs.EmailHandler
 		fmt.Println("sending email:", string(payload))
 		return nil
 	})
 
-	engine := engine.New(repo, executor, 5, 2*time.Second)
+	eng := engine.New(repo, executor, cfg.Concurrency, cfg.BaseDelay)
 
-	engine.Start(ctx)
+	logger.Log.Info("worker started", "concurrency", cfg.Concurrency, "base_delay", cfg.BaseDelay)
+
+	eng.Start(ctx)
 
 	<-ctx.Done()
+	logger.Log.Info("worker shutdown complete")
 }
