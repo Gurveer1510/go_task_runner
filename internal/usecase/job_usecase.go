@@ -2,24 +2,32 @@ package usecase
 
 import (
 	"context"
-	"errors"
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/go-task-runner/internal/jobs"
+	"github.com/go-task-runner/internal/logger"
 	"github.com/go-task-runner/internal/models"
 	"github.com/go-task-runner/internal/repository"
 	"github.com/google/uuid"
 )
+
+// ValidationError represents a client-side input error (HTTP 400).
+type ValidationError struct {
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
 
 type JobUsecaseInterface interface {
 	CreateJob(ctx context.Context, job *models.Job) (string, error)
 }
 
 type jobUsecase struct {
-	jobRepo repository.JobRepositoryInterface
-
+	jobRepo   repository.JobRepositoryInterface
 	validator *validator.Validate
 }
 
@@ -31,36 +39,34 @@ func NewJobUsecase(jobRepo repository.JobRepositoryInterface, v *validator.Valid
 }
 
 func (j *jobUsecase) CreateJob(ctx context.Context, job *models.Job) (string, error) {
-	log.Printf("in the usecase job with ID: %+v", job)
-
 	if job.NextRunAt != nil && job.NextRunAt.Before(time.Now()) {
-		return "", errors.New("Invalid schedule time for the task")
+		return "", &ValidationError{Message: "invalid schedule time: must be in the future"}
 	}
 
 	if err := jobs.ValidateJob(job, j.validator); err != nil {
-		return "", err
+		return "", &ValidationError{Message: err.Error()}
 	}
 
-	id := uuid.New()
-	job.ID = id
-
-	var nextRun time.Time
-	if job.NextRunAt != nil {
-		nextRun = *job.NextRunAt
-	} else {
-		nextRun = time.Now()
-	}
-	job.NextRunAt = &nextRun
-
+	now := time.Now()
 	newJob := &models.Job{
-		ID:         id,
+		ID:         uuid.New(),
 		Type:       job.Type,
 		Payload:    job.Payload,
 		Status:     models.StatusPending,
 		RetryCount: 0,
 		MaxRetries: job.MaxRetries,
-		NextRunAt:  &nextRun,
+		NextRunAt:  job.NextRunAt,
 	}
 
-	return j.jobRepo.Create(ctx, newJob)
+	if newJob.NextRunAt == nil {
+		newJob.NextRunAt = &now
+	}
+
+	id, err := j.jobRepo.Create(ctx, newJob)
+	if err != nil {
+		return "", fmt.Errorf("failed to create job: %w", err)
+	}
+
+	logger.Log.Info("job created", "job_id", id, "job_type", job.Type)
+	return id, nil
 }
