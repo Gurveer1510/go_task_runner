@@ -22,7 +22,9 @@ func (h *Handler) CreateJob(rw http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(rw, "invalid payload", http.StatusBadRequest)
+		errorResp := ErrorResponse{Error: "invalid payload"}
+		json.NewEncoder(rw).Encode(errorResp)
+		rw.WriteHeader(http.StatusBadRequest)
 		return
 	}
 

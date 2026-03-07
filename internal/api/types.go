@@ -7,8 +7,8 @@ import (
 
 type CreateJobRequest struct {
 	Type       string          `json:"type,omitempty" validate:"required"`
-	Payload    json.RawMessage `json:"payload,omitempty"`
-	MaxRetries int             `json:"max_retries,omitempty" validate:"gte=0,lte=10"`
+	Payload    json.RawMessage `json:"payload,omitempty" validate:"required"`
+	MaxRetries int             `json:"max_retries,omitempty" validate:"gte=0,lte=10 required"`
 	NextRunAt  *time.Time      `json:"next_run_at,omitempty"`
 }
 
