@@ -50,12 +50,12 @@ func (e *Engine) workerLoop(ctx context.Context, id int) {
 
 		logger.Log.Info("job claimed", "worker_id", workerID, "job_id", job.ID.String(), "job_type", job.Type)
 
-		e.runJob(ctx, job)
-		if err != nil {
+		execErr := e.runJob(ctx, job)
+		if execErr != nil {
 			logger.Log.Error("job execution failed", "worker_id", workerID, "job_id", job.ID.String(), "error", err)
 			if job.RetryCount < job.MaxRetries {
 				delay := e.baseDelay * time.Duration(math.Pow(2, float64(job.RetryCount)))
-				delay += time.Duration(rand.Int63n(int64(delay/2)))
+				delay += time.Duration(rand.Int63n(int64(delay / 2)))
 				if markErr := e.repository.MarkRetrying(ctx, job.ID.String(), delay); markErr != nil {
 					logger.Log.Error("failed to mark job as retrying", "job_id", job.ID.String(), "error", markErr)
 				}

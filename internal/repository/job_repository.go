@@ -49,7 +49,10 @@ func (r *JobRepo) Create(ctx context.Context, job *models.Job) (string, error) {
 func (r *JobRepo) MarkFailed(ctx context.Context, jobID string) error {
 	query := `
 		UPDATE jobs
-		SET status = 'failed'
+		SET status = 'failed',
+		locked_by = NULL,
+		locked_at = NULL,
+		updated_at = NOW()
 		WHERE id = $1
 	`
 	_, err := r.db.Exec(ctx, query, jobID)
@@ -59,7 +62,10 @@ func (r *JobRepo) MarkFailed(ctx context.Context, jobID string) error {
 func (r *JobRepo) MarkCompleted(ctx context.Context, jobID string) error {
 	query := `
 		UPDATE jobs
-		SET status = 'completed'
+		SET status = 'completed',
+		locked_by = NULL,
+		locked_at = NULL,
+		updated_at = NOW()
 		WHERE id = $1
 	`
 	_, err := r.db.Exec(ctx, query, jobID)
