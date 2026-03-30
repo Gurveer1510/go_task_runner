@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-task-runner/internal/logger"
+	"github.com/go-task-runner/internal/models"
 	"github.com/jackc/pgx/v4"
 )
 
@@ -15,6 +16,12 @@ func (e *Engine) Start(ctx context.Context) {
 	for i := 0; i < e.concurrency; i++ {
 		go e.workerLoop(ctx, i)
 	}
+}
+
+func (e *Engine) runJob(ctx context.Context, job *models.Job) error {
+	e.Wg.Add(1)
+	defer e.Wg.Done()
+	return e.executor.Execute(ctx, job)
 }
 
 func (e *Engine) workerLoop(ctx context.Context, id int) {
@@ -33,19 +40,17 @@ func (e *Engine) workerLoop(ctx context.Context, id int) {
 		job, err := e.repository.ClaimJob(ctx, workerID)
 		if err != nil {
 			if err == pgx.ErrNoRows {
-				time.Sleep(e.baseDelay * time.Millisecond)
+				time.Sleep(e.baseDelay)
 				continue
 			}
 			logger.Log.Error("failed to claim job", "worker_id", workerID, "error", err)
-			time.Sleep(e.baseDelay * time.Millisecond)
+			time.Sleep(e.baseDelay)
 			continue
 		}
 
 		logger.Log.Info("job claimed", "worker_id", workerID, "job_id", job.ID.String(), "job_type", job.Type)
 
-		e.Wg.Add(1)
-		err = e.executor.Execute(ctx, job)
-		e.Wg.Done()
+		e.runJob(ctx, job)
 		if err != nil {
 			logger.Log.Error("job execution failed", "worker_id", workerID, "job_id", job.ID.String(), "error", err)
 			if job.RetryCount < job.MaxRetries {

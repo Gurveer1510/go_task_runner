@@ -17,5 +17,6 @@ type CreateJobResponse struct {
 }
 
 type ErrorResponse struct {
-	Error string `json:"error,omitempty"`
+	Error   string `json:"error,omitempty"`
+	Message string `json:"message,omitempty"`
 }

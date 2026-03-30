@@ -22,8 +22,10 @@ func (h *Handler) CreateJob(rw http.ResponseWriter, r *http.Request) {
 	var req CreateJobRequest
 
 	defer r.Body.Close()
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		errorResp := ErrorResponse{Error: "invalid payload"}
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
+		errorResp := ErrorResponse{Error: "invalid payload", Message: "failed"}
 		rw.Header().Set("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(rw).Encode(errorResp)
@@ -42,12 +44,12 @@ func (h *Handler) CreateJob(rw http.ResponseWriter, r *http.Request) {
 		var valErr *usecase.ValidationError
 		if errors.As(err, &valErr) {
 			rw.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(rw).Encode(ErrorResponse{Error: valErr.Error()})
+			json.NewEncoder(rw).Encode(ErrorResponse{Error: valErr.Error(), Message: "failed"})
 			return
 		}
 	}
 	if err != nil {
-		errResp := ErrorResponse{Error: err.Error()}
+		errResp := ErrorResponse{Error: err.Error(), Message: "failed"}
 		http.Error(rw, errResp.Error, http.StatusInternalServerError)
 		log.Println(err.Error())
 		return
