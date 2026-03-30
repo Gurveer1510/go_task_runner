@@ -47,5 +47,6 @@ func main() {
 	eng.Start(ctx)
 
 	<-ctx.Done()
+	eng.Wg.Wait()
 	logger.Log.Info("worker shutdown complete")
 }
