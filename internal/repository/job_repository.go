@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-task-runner/internal/models"
 	"github.com/google/uuid"
@@ -12,7 +13,7 @@ type JobRepositoryInterface interface {
 	Create(ctx context.Context, job *models.Job) (string, error)
 	MarkFailed(ctx context.Context, jobID string) error
 	MarkCompleted(ctx context.Context, jobID string) error
-	MarkRetrying(ctx context.Context, jobID string) error
+	MarkRetrying(ctx context.Context, jobID string, delay time.Duration) error
 	ClaimJob(ctx context.Context, workerID string) (*models.Job, error)
 }
 
@@ -65,18 +66,18 @@ func (r *JobRepo) MarkCompleted(ctx context.Context, jobID string) error {
 	return err
 }
 
-func (r *JobRepo) MarkRetrying(ctx context.Context, jobID string) error {
+func (r *JobRepo) MarkRetrying(ctx context.Context, jobID string, delay time.Duration) error {
 	query := `
 		UPDATE jobs
 		SET status = 'retrying',
 			retry_count = retry_count + 1,
-			next_run_at = NOW() + INTERVAL '1 second' * (retry_count + 1),
+			next_run_at = NOW() + $2 * INTERVAL '1 millisecond',
 			locked_by = NULL,
 			locked_at = NULL,
 			updated_at = NOW()
 		WHERE id = $1
 	`
-	_, err := r.db.Exec(ctx, query, jobID)
+	_, err := r.db.Exec(ctx, query, jobID, delay.Milliseconds())
 	return err
 }
 

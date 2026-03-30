@@ -3,6 +3,8 @@ package engine
 import (
 	"context"
 	"fmt"
+	"math"
+	"math/rand"
 	"time"
 
 	"github.com/go-task-runner/internal/logger"
@@ -31,21 +33,25 @@ func (e *Engine) workerLoop(ctx context.Context, id int) {
 		job, err := e.repository.ClaimJob(ctx, workerID)
 		if err != nil {
 			if err == pgx.ErrNoRows {
-				time.Sleep(300 * time.Millisecond)
+				time.Sleep(e.baseDelay * time.Millisecond)
 				continue
 			}
 			logger.Log.Error("failed to claim job", "worker_id", workerID, "error", err)
-			time.Sleep(time.Second)
+			time.Sleep(e.baseDelay * time.Millisecond)
 			continue
 		}
 
 		logger.Log.Info("job claimed", "worker_id", workerID, "job_id", job.ID.String(), "job_type", job.Type)
 
+		e.Wg.Add(1)
 		err = e.executor.Execute(ctx, job)
+		e.Wg.Done()
 		if err != nil {
 			logger.Log.Error("job execution failed", "worker_id", workerID, "job_id", job.ID.String(), "error", err)
 			if job.RetryCount < job.MaxRetries {
-				if markErr := e.repository.MarkRetrying(ctx, job.ID.String()); markErr != nil {
+				delay := e.baseDelay * time.Duration(math.Pow(2, float64(job.RetryCount)))
+				delay += time.Duration(rand.Int63n(int64(delay/2)))
+				if markErr := e.repository.MarkRetrying(ctx, job.ID.String(), delay); markErr != nil {
 					logger.Log.Error("failed to mark job as retrying", "job_id", job.ID.String(), "error", markErr)
 				}
 			} else {
