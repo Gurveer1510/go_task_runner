@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 
@@ -23,8 +24,9 @@ func (h *Handler) CreateJob(rw http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		errorResp := ErrorResponse{Error: "invalid payload"}
-		json.NewEncoder(rw).Encode(errorResp)
+		rw.Header().Set("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(rw).Encode(errorResp)
 		return
 	}
 
@@ -36,6 +38,14 @@ func (h *Handler) CreateJob(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	id, err := h.usecase.CreateJob(r.Context(), job)
+	if err != nil {
+		var valErr *usecase.ValidationError
+		if errors.As(err, &valErr) {
+			rw.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(rw).Encode(ErrorResponse{Error: valErr.Error()})
+			return
+		}
+	}
 	if err != nil {
 		errResp := ErrorResponse{Error: err.Error()}
 		http.Error(rw, errResp.Error, http.StatusInternalServerError)

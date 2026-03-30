@@ -29,7 +29,7 @@ func LoadConfig() (*Config, error) {
 	var fileLookupError viper.ConfigFileNotFoundError
 	if err := viper.ReadInConfig(); err != nil {
 		if errors.As(err, &fileLookupError) {
-			return nil, fileLookupError
+			return nil, err
 		} else {
 			return nil, err
 		}
